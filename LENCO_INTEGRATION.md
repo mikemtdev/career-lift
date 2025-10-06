@@ -2,6 +2,8 @@
 
 This document describes the Lenco payment integration implementation for the CareerLift CV builder application.
 
+![Payment Dialog Screenshot](https://github.com/user-attachments/assets/9007a899-270c-4a82-a76e-1d234bdfd770)
+
 ## Overview
 
 CareerLift uses Lenco's payment API (https://lenco-api.readme.io/v2.0) to process payments for additional CVs. The first CV is free for each user, and additional CVs cost $1.00 each.
