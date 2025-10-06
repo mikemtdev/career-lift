@@ -50,3 +50,15 @@ export interface CVFormData {
   experience: Experience[];
   skills: string[];
 }
+
+export interface ATSScoreResult {
+  score: number;
+  suggestions: string[];
+  breakdown: {
+    personalInfo: number;
+    education: number;
+    experience: number;
+    skills: number;
+    formatting: number;
+  };
+}

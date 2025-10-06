@@ -6,11 +6,14 @@ import { useCvs } from '@/hooks/useCvs';
 import { apiClient } from '@/lib/api';
 import { Download, Plus, FileText } from 'lucide-react';
 import { withAuth } from '@/hocs/withAuth';
+import { ATSScoreCard } from '@/components/ATSScoreCard';
+import { useState } from 'react';
 
 const DashboardComponent = () => {
   const { user, logout } = useAuth();
   const { cvs, isLoading } = useCvs();
   const navigate = useNavigate();
+  const [selectedCvForATS, setSelectedCvForATS] = useState<string | null>(null);
 
   const handleLogout = () => {
     apiClient.logout();
@@ -80,32 +83,46 @@ const DashboardComponent = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {cvs.map((cv) => (
-              <Card key={cv.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    {cv.title}
-                  </CardTitle>
-                  <CardDescription>
-                    Created: {new Date(cv.createdAt).toLocaleDateString()}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>Education entries: {cv.education.length}</p>
-                    <p>Experience entries: {cv.experience.length}</p>
-                    <p>Skills: {cv.skills.length}</p>
-                  </div>
-                  <Button
-                    className="w-full mt-4"
-                    variant="outline"
-                    onClick={() => handleDownload(cv.id)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PDF
-                  </Button>
-                </CardContent>
-              </Card>
+              <div key={cv.id} className="space-y-4">
+                <Card className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5" />
+                      {cv.title}
+                    </CardTitle>
+                    <CardDescription>
+                      Created: {new Date(cv.createdAt).toLocaleDateString()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>Education entries: {cv.education.length}</p>
+                      <p>Experience entries: {cv.experience.length}</p>
+                      <p>Skills: {cv.skills.length}</p>
+                    </div>
+                    <div className="space-y-2 mt-4">
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={() => handleDownload(cv.id)}
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download PDF
+                      </Button>
+                      <Button
+                        className="w-full"
+                        variant="secondary"
+                        onClick={() => setSelectedCvForATS(selectedCvForATS === cv.id ? null : cv.id)}
+                      >
+                        {selectedCvForATS === cv.id ? 'Hide' : 'View'} ATS Score
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+                {selectedCvForATS === cv.id && (
+                  <ATSScoreCard cvId={cv.id} />
+                )}
+              </div>
             ))}
           </div>
         )}

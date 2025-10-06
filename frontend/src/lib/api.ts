@@ -86,6 +86,10 @@ class ApiClient {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   }
+
+  async getATSScore(cvId: string) {
+    return this.fetch(`/cv/ats-score/${cvId}`);
+  }
 }
 
 export const apiClient = new ApiClient();
