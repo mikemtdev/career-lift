@@ -87,16 +87,29 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     });
 
     // First CV is free, subsequent ones require payment
-    const isPaid = userCvs.length === 0;
-    const requiresPayment = userCvs.length > 0;
+    const isFreeCV = userCvs.length === 0;
+    const requiresPayment = !isFreeCV;
 
+    // PAYMENT GUARD: Enforce payment requirement for additional CVs
     if (requiresPayment && !req.body.paymentConfirmed) {
       return res.status(402).json({
         error: 'Payment required',
         message: 'Additional CVs cost $1. Please confirm payment.',
         requiresPayment: true,
+        cvCount: userCvs.length,
       });
     }
+
+    // TODO: In production, integrate with a payment processor (e.g., Stripe)
+    // to verify actual payment before allowing CV creation. The paymentConfirmed
+    // flag should be replaced with a verified payment transaction ID.
+    // Example:
+    // if (requiresPayment) {
+    //   const paymentVerified = await verifyStripePayment(req.body.paymentIntentId);
+    //   if (!paymentVerified) {
+    //     return res.status(402).json({ error: 'Payment verification failed' });
+    //   }
+    // }
 
     // Create CV
     const [newCv] = await db
@@ -108,13 +121,13 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
         education: cvData.education,
         experience: cvData.experience,
         skills: cvData.skills,
-        isPaid: !isPaid, // If not the first CV, mark as paid
+        isPaid: requiresPayment, // Track whether this CV required payment
       })
       .returning();
 
     res.status(201).json({
       cv: newCv,
-      message: isPaid ? 'Free CV created successfully' : 'CV created successfully',
+      message: isFreeCV ? 'Free CV created successfully' : 'CV created successfully (paid)',
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -140,7 +153,13 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'CV not found' });
     }
 
-    // Update CV
+    // SECURITY: Ensure only the owner can update the CV
+    // The and() clause above already enforces this, but we double-check
+    if (existingCv.userId !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized to update this CV' });
+    }
+
+    // Update CV (editing existing CVs is free - no payment required)
     const [updatedCv] = await db
       .update(cvs)
       .set({
@@ -163,6 +182,39 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: error.errors });
     }
     console.error('Update CV error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE CV
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const cvId = req.params.id;
+
+    // Get existing CV to verify ownership
+    const existingCv = await db.query.cvs.findFirst({
+      where: and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)),
+    });
+
+    if (!existingCv) {
+      return res.status(404).json({ error: 'CV not found' });
+    }
+
+    // SECURITY: Ensure only the owner can delete the CV
+    if (existingCv.userId !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized to delete this CV' });
+    }
+
+    // Delete CV
+    await db
+      .delete(cvs)
+      .where(and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)));
+
+    res.json({
+      message: 'CV deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete CV error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

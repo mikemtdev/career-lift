@@ -75,6 +75,12 @@ class ApiClient {
     });
   }
 
+  async deleteCv(cvId: string) {
+    return this.fetch(`/cv/${cvId}`, {
+      method: 'DELETE',
+    });
+  }
+
   async downloadCv(cvId: string) {
     const token = this.getAuthToken();
     const response = await fetch(`${API_BASE_URL}/cv/download/${cvId}`, {
