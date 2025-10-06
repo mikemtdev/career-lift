@@ -1,10 +1,15 @@
+import dotenv from 'dotenv';
+
+// Configure dotenv FIRST, before any other imports
+dotenv.config();
+
+// Debug: Check if DATABASE_URL is loaded
+console.log('DATABASE_URL loaded:', !!process.env.DATABASE_URL);
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import cvRoutes from './routes/cv.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

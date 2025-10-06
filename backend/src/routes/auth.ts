@@ -21,6 +21,7 @@ const loginSchema = z.object({
 router.post('/signup', async (req, res) => {
   try {
     const { email, password, name } = signupSchema.parse(req.body);
+    console.log(req.body);
 
     // Check if user already exists
     const existingUser = await db.query.users.findFirst({

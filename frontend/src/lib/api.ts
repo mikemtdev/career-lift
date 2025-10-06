@@ -34,6 +34,8 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
+    console.log("gee", data);
+
     localStorage.setItem('token', data.token);
     return data;
   }
