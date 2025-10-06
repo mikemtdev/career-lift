@@ -6,6 +6,7 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
   name: text('name'),
+  isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -29,6 +30,13 @@ export const sessions = pgTable('sessions', {
   token: text('token').notNull().unique(),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const pricing = pgTable('pricing', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  additionalCvPrice: integer('additional_cv_price').notNull().default(100), // price in cents
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { cvs } from '../db/schema.js';
+import { cvs, pricing } from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { z } from 'zod';
@@ -42,6 +42,22 @@ const cvSchema = z.object({
   skills: z.array(z.string()),
 });
 
+// GET current pricing
+router.get('/pricing', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const currentPricing = await db.query.pricing.findFirst({
+      orderBy: (pricing, { desc }) => [desc(pricing.createdAt)],
+    });
+
+    res.json({
+      additionalCvPrice: currentPricing?.additionalCvPrice || 100, // default $1.00 in cents
+    });
+  } catch (error) {
+    console.error('Get pricing error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET all CVs for authenticated user
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -66,6 +82,13 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       where: eq(cvs.userId, req.userId!),
     });
 
+    // Get current pricing
+    const currentPricing = await db.query.pricing.findFirst({
+      orderBy: (pricing, { desc }) => [desc(pricing.createdAt)],
+    });
+    const priceInCents = currentPricing?.additionalCvPrice || 100;
+    const priceInDollars = (priceInCents / 100).toFixed(2);
+
     // First CV is free, subsequent ones require payment
     const isPaid = userCvs.length === 0;
     const requiresPayment = userCvs.length > 0;
@@ -73,8 +96,9 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
     if (requiresPayment && !req.body.paymentConfirmed) {
       return res.status(402).json({
         error: 'Payment required',
-        message: 'Additional CVs cost $1. Please confirm payment.',
+        message: `Additional CVs cost $${priceInDollars}. Please confirm payment.`,
         requiresPayment: true,
+        price: priceInCents,
       });
     }
 

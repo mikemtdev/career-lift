@@ -3,6 +3,7 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Dashboard } from './pages/Dashboard';
 import { CreateCV } from './pages/CreateCV';
+import { AdminDashboard } from './pages/AdminDashboard';
 import './index.css';
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/create-cv" element={<CreateCV />} />
+        <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
