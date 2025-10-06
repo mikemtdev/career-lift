@@ -56,6 +56,26 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// GET single CV by ID
+router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const cvId = req.params.id;
+    
+    const cv = await db.query.cvs.findFirst({
+      where: and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)),
+    });
+
+    if (!cv) {
+      return res.status(404).json({ error: 'CV not found' });
+    }
+
+    res.json({ cv });
+  } catch (error) {
+    console.error('Get CV error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST create new CV
 router.post('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -101,6 +121,48 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: error.errors });
     }
     console.error('Create CV error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT update existing CV
+router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const cvId = req.params.id;
+    const cvData = cvSchema.parse(req.body);
+
+    // Get existing CV to verify ownership
+    const existingCv = await db.query.cvs.findFirst({
+      where: and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)),
+    });
+
+    if (!existingCv) {
+      return res.status(404).json({ error: 'CV not found' });
+    }
+
+    // Update CV
+    const [updatedCv] = await db
+      .update(cvs)
+      .set({
+        title: cvData.title,
+        personalInfo: cvData.personalInfo,
+        education: cvData.education,
+        experience: cvData.experience,
+        skills: cvData.skills,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)))
+      .returning();
+
+    res.json({
+      cv: updatedCv,
+      message: 'CV updated successfully',
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Update CV error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
