@@ -64,6 +64,25 @@ class ApiClient {
     });
   }
 
+  async initiatePayment(paymentData: {
+    paymentMethod: 'mobile_money' | 'card';
+    phoneNumber?: string;
+    amount: number;
+    currency: string;
+    cvData: any;
+  }) {
+    return this.fetch('/payment/initiate', {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
+    });
+  }
+
+  async verifyPayment(reference: string) {
+    return this.fetch(`/payment/verify/${reference}`, {
+      method: 'POST',
+    });
+  }
+
   async downloadCv(cvId: string) {
     const token = this.getAuthToken();
     const response = await fetch(`${API_BASE_URL}/cv/download/${cvId}`, {
