@@ -57,10 +57,27 @@ class ApiClient {
     return this.fetch('/cv');
   }
 
+  async getCv(cvId: string) {
+    return this.fetch(`/cv/${cvId}`);
+  }
+
   async createCv(cvData: any) {
     return this.fetch('/cv', {
       method: 'POST',
       body: JSON.stringify(cvData),
+    });
+  }
+
+  async updateCv(cvId: string, cvData: any) {
+    return this.fetch(`/cv/${cvId}`, {
+      method: 'PUT',
+      body: JSON.stringify(cvData),
+    });
+  }
+
+  async deleteCv(cvId: string) {
+    return this.fetch(`/cv/${cvId}`, {
+      method: 'DELETE',
     });
   }
 
