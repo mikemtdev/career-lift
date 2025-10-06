@@ -8,6 +8,7 @@ A modern CV builder application with payment integration, built with React, Node
 - 🔐 Secure JWT authentication with bcrypt password hashing
 - 💳 Payment system (1 free CV per user, $1 for additional CVs)
 - 📄 ATS-friendly PDF generation
+- 🎯 **ATS Score System** - Evaluate CV quality with actionable suggestions
 - 💾 PostgreSQL database with Drizzle ORM (Neon DB compatible)
 - 🔄 SWR for efficient data fetching
 - 📱 Fully responsive design
@@ -121,6 +122,7 @@ npm run build
 - `GET /cv` - Get all CVs for authenticated user
 - `POST /cv` - Create a new CV (free for first, $1 for additional)
 - `GET /cv/download/:id` - Download CV as PDF
+- `GET /cv/ats-score/:id` - Get ATS score and suggestions for a CV
 
 ## Tech Stack
 
@@ -159,6 +161,18 @@ npm run build
 - ATS-friendly formatting
 - Clean, professional layout
 - Includes all CV sections
+
+### ATS Score System
+- Real-time CV analysis with 0-100 scoring
+- Detailed breakdown across 5 categories:
+  - Personal Information (20 pts)
+  - Education (20 pts)
+  - Experience (30 pts)
+  - Skills (20 pts)
+  - Formatting (10 pts)
+- Actionable suggestions for improvement
+- Visual score badges (Excellent, Good, Fair, Needs Work)
+- Toggle detailed/summary view
 
 ## Contributing
 
