@@ -10,22 +10,26 @@ import { Plus, Trash2 } from 'lucide-react';
 interface CVFormProps {
   onSubmit: (data: CVFormData) => void;
   isLoading?: boolean;
+  initialData?: CVFormData;
+  submitButtonText?: string;
 }
 
-export const CVForm = ({ onSubmit, isLoading }: CVFormProps) => {
-  const [formData, setFormData] = useState<CVFormData>({
-    title: '',
-    personalInfo: {
-      fullName: '',
-      email: '',
-      phone: '',
-      address: '',
-      summary: '',
-    },
-    education: [],
-    experience: [],
-    skills: [],
-  });
+export const CVForm = ({ onSubmit, isLoading, initialData, submitButtonText = 'Create CV' }: CVFormProps) => {
+  const [formData, setFormData] = useState<CVFormData>(
+    initialData || {
+      title: '',
+      personalInfo: {
+        fullName: '',
+        email: '',
+        phone: '',
+        address: '',
+        summary: '',
+      },
+      education: [],
+      experience: [],
+      skills: [],
+    }
+  );
 
   const [skillInput, setSkillInput] = useState('');
 
@@ -394,7 +398,7 @@ export const CVForm = ({ onSubmit, isLoading }: CVFormProps) => {
 
       <div className="flex justify-end">
         <Button type="submit" size="lg" disabled={isLoading}>
-          {isLoading ? 'Creating CV...' : 'Create CV'}
+          {isLoading ? 'Saving...' : submitButtonText}
         </Button>
       </div>
     </form>
