@@ -1,6 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-import { searchPhoneNumber, formatPhoneNumber, normalizePhoneNumber } from '../utils/phoneNumber';
+import { searchPhoneNumber, formatPhoneNumber, normalizePhoneNumber } from '../utils/phoneNumber.js';
 
 dotenv.config();
 

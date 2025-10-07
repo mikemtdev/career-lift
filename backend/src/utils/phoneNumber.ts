@@ -1,4 +1,4 @@
-import mobileNumberPrefixes from '../constants/mobile_numbers';
+import mobileNumberPrefixes from '../constants/mobile_numbers.js';
 
 export interface PhoneNumberInfo {
     isValid: boolean;
