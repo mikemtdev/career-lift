@@ -120,6 +120,8 @@ class ApiClient {
     document.body.removeChild(a);
   }
 
+  async getATSScore(cvId: string) {
+    return this.fetch(`/cv/ats-score/${cvId}`);
   async getPricing() {
     return this.fetch('/cv/pricing');
   }

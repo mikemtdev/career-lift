@@ -5,6 +5,7 @@ import { eq, and } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { z } from 'zod';
 import PDFDocument from 'pdfkit';
+import { calculateATSScore } from '../utils/atsScoring.js';
 
 const router = Router();
 
@@ -351,6 +352,35 @@ router.get('/download/:id', authenticateToken, async (req: AuthRequest, res) => 
     doc.end();
   } catch (error) {
     console.error('Download CV error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET ATS score for a CV
+router.get('/ats-score/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const cvId = req.params.id;
+
+    // Get CV
+    const cv = await db.query.cvs.findFirst({
+      where: and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)),
+    });
+
+    if (!cv) {
+      return res.status(404).json({ error: 'CV not found' });
+    }
+
+    // Calculate ATS score
+    const atsScore = calculateATSScore({
+      personalInfo: cv.personalInfo as any,
+      education: cv.education as any[],
+      experience: cv.experience as any[],
+      skills: cv.skills as string[],
+    });
+
+    res.json(atsScore);
+  } catch (error) {
+    console.error('ATS score error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
