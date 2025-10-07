@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { cvs, pricing } from '../db/schema.js';
+import { cvs, payments , pricing} from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { z } from 'zod';
@@ -124,16 +124,32 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       });
     }
 
-    // TODO: In production, integrate with a payment processor (e.g., Stripe)
-    // to verify actual payment before allowing CV creation. The paymentConfirmed
-    // flag should be replaced with a verified payment transaction ID.
-    // Example:
-    // if (requiresPayment) {
-    //   const paymentVerified = await verifyStripePayment(req.body.paymentIntentId);
-    //   if (!paymentVerified) {
-    //     return res.status(402).json({ error: 'Payment verification failed' });
-    //   }
-    // }
+    // If payment is required, verify the payment
+    if (requiresPayment && req.body.paymentReference) {
+      const payment = await db.query.payments.findFirst({
+        where: (payments, { and, eq }) =>
+          and(
+            eq(payments.lencoReference, req.body.paymentReference),
+            eq(payments.userId, req.userId!),
+            eq(payments.status, 'success')
+          ),
+      });
+
+      if (!payment) {
+        return res.status(402).json({
+          error: 'Payment not verified',
+          message: 'Payment verification failed. Please complete payment first.',
+        });
+      }
+
+      // Check if payment already used
+      if (payment.cvId) {
+        return res.status(400).json({
+          error: 'Payment already used',
+          message: 'This payment has already been used to create a CV.',
+        });
+      }
+    }
 
     // Create CV
     const [newCv] = await db

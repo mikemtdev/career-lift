@@ -34,7 +34,29 @@ export const sessions = pgTable('sessions', {
 
 export const pricing = pgTable('pricing', {
   id: uuid('id').primaryKey().defaultRandom(),
-  additionalCvPrice: integer('additional_cv_price').notNull().default(100), // price in cents
+  additionalCvPrice: integer('additional_cv_price').notNull().default(100),
+   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  cvId: uuid('cv_id').references(() => cvs.id, { onDelete: 'set null' }),
+  amount: integer('amount').notNull(), // Amount in cents
+  currency: text('currency').default('USD').notNull(),
+  paymentMethod: text('payment_method').notNull(), // 'mobile_money' or 'card'
+  lencoReference: text('lenco_reference').unique(),
+  status: text('status').notNull(), // 'pending', 'success', 'failed'
+  metadata: json('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const payments = pgTable('payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  cvId: uuid('cv_id').references(() => cvs.id, { onDelete: 'set null' }),
+  amount: integer('amount').notNull(), // Amount in cents
+  currency: text('currency').default('USD').notNull(),
+  paymentMethod: text('payment_method').notNull(), // 'mobile_money' or 'card'
+  lencoReference: text('lenco_reference').unique(),
+  status: text('status').notNull(), // 'pending', 'success', 'failed'
+  metadata: json('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -42,6 +64,7 @@ export const pricing = pgTable('pricing', {
 export const usersRelations = relations(users, ({ many }) => ({
   cvs: many(cvs),
   sessions: many(sessions),
+  payments: many(payments),
 }));
 
 export const cvsRelations = relations(cvs, ({ one }) => ({
@@ -55,5 +78,16 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, {
     fields: [sessions.userId],
     references: [users.id],
+  }),
+}));
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  user: one(users, {
+    fields: [payments.userId],
+    references: [users.id],
+  }),
+  cv: one(cvs, {
+    fields: [payments.cvId],
+    references: [cvs.id],
   }),
 }));

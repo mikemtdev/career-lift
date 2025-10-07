@@ -10,6 +10,7 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.js';
 import cvRoutes from './routes/cv.js';
+import paymentRoutes from './routes/payment.js';
 import adminRoutes from './routes/admin.js';
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(express.json());
 // Routes
 app.use('/auth', authRoutes);
 app.use('/cv', cvRoutes);
+app.use('/payment', paymentRoutes);
 app.use('/admin', adminRoutes);
 
 // Health check

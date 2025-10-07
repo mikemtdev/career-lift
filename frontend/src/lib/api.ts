@@ -68,6 +68,22 @@ class ApiClient {
     });
   }
 
+  async initiatePayment(paymentData: {
+    paymentMethod: 'mobile_money' | 'card';
+    phoneNumber?: string;
+    amount: number;
+    currency: string;
+    cvData: any;
+  }) {
+    return this.fetch('/payment/initiate', {
+      method: 'POST',
+      body: JSON.stringify(paymentData),
+    });
+  }
+
+  async verifyPayment(reference: string) {
+    return this.fetch(`/payment/verify/${reference}`, {
+      method: 'POST',
   async updateCv(cvId: string, cvData: any) {
     return this.fetch(`/cv/${cvId}`, {
       method: 'PUT',
