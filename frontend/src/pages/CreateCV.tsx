@@ -18,7 +18,6 @@ const CreateCVComponent = () => {
   const [error, setError] = useState('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [pendingCvData, setPendingCvData] = useState<CVFormData | null>(null);
-  const [showPaymentWarning, setShowPaymentWarning] = useState(false);
   const [currentPrice, setCurrentPrice] = useState('1.00');
 
   useEffect(() => {
@@ -74,20 +73,14 @@ const CreateCVComponent = () => {
       // Redirect to Lenco payment page if authorization URL is provided
       if (response.authorization_url) {
         window.location.href = response.authorization_url;
-      const payload = confirmPayment ? { ...data, paymentConfirmed: true } : data;
-      await apiClient.createCv(payload);
-      await mutate();
-      navigate('/dashboard');
-    } catch (err: any) {
-      if (err.message.includes('Payment required')) {
-        setShowPaymentWarning(true);
-        setError(`This is your additional CV. It costs $${currentPrice}. Click "Confirm & Create" to proceed.`);
       } else {
         // For demo purposes, simulate payment success
         setTimeout(async () => {
           try {
-            const verifyResponse = await apiClient.verifyPayment(response.payment.reference);
+            const verifyResponse = await apiClient.verifyPayment(response.payment?.reference || 'demo-ref');
             if (verifyResponse.status === 'success') {
+              // Create CV with payment confirmed
+              await apiClient.createCv(pendingCvData);
               await mutate();
               setShowPaymentDialog(false);
               navigate('/dashboard');

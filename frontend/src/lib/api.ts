@@ -84,6 +84,9 @@ class ApiClient {
   async verifyPayment(reference: string) {
     return this.fetch(`/payment/verify/${reference}`, {
       method: 'POST',
+    })
+  }
+
   async updateCv(cvId: string, cvData: any) {
     return this.fetch(`/cv/${cvId}`, {
       method: 'PUT',
