@@ -14,7 +14,7 @@ interface InitiatePaymentParams {
   paymentMethod: 'mobile_money' | 'card';
   customerEmail: string;
   customerName: string;
-  phoneNumber: string; // Made required for mobile money payments
+  phoneNumber?: string; // Required for mobile money payments, optional for card payments
   reference: string;
   callbackUrl?: string;
 }
@@ -127,6 +127,11 @@ class LencoPaymentService {
   }
 
   async initiateMobileMoneyPayment(params: InitiatePaymentParams): Promise<LencoPaymentResponse> {
+    // Phone number is required for mobile money payments
+    if (!params.phoneNumber) {
+      throw new Error('Phone number is required for mobile money payments');
+    }
+
     // Use phone number utility to get operator and country info
     const phoneInfo = searchPhoneNumber(params.phoneNumber);
     console.log(phoneInfo);
@@ -158,7 +163,7 @@ class LencoPaymentService {
     }
 
     const bearer = 'merchant';
-    const normalizedPhone = normalizePhoneNumber(params.phoneNumber);
+    const normalizedPhone = normalizePhoneNumber(params.phoneNumber!);
     console.log({
       operator: phoneInfo.operator,
       bearer: bearer,
