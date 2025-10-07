@@ -15,6 +15,13 @@
       "when": 1759754784209,
       "tag": "0001_glamorous_phalanx",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1759852443779,
+      "tag": "0002_acoustic_liz_osborn",
+      "breakpoints": true
     }
   ]
 }
