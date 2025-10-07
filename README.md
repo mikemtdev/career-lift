@@ -6,7 +6,9 @@ A modern CV builder application with payment integration, built with React, Node
 
 - 🎨 Modern, minimalist UI built with React, Vite, and shadcn UI
 - 🔐 Secure JWT authentication with bcrypt password hashing
-- 💳 Payment system (1 free CV per user, $1 for additional CVs)
+- 💳 Lenco payment integration (1 free CV per user, $1 for additional CVs)
+  - Mobile Money (primary payment method)
+  - Card Payment (secondary payment method)
 - 📄 ATS-friendly PDF generation
 - 🎯 **ATS Score System** - Evaluate CV quality with actionable suggestions
 - 💾 PostgreSQL database with Drizzle ORM (Neon DB compatible)
@@ -67,7 +69,11 @@ cp .env.example .env
 Edit `backend/.env` and configure:
 - `DATABASE_URL`: Your PostgreSQL/Neon connection string
 - `JWT_SECRET`: A secure random string for JWT signing
-- Optional: Stripe keys for payment processing
+- `LENCO_API_KEY`: Your Lenco API key (get from https://lenco.co)
+- `LENCO_SECRET_KEY`: Your Lenco secret key
+- `LENCO_BASE_URL`: Lenco API base URL (default: https://api.lenco.co/v2)
+
+See [LENCO_INTEGRATION.md](./LENCO_INTEGRATION.md) for detailed payment setup instructions.
 
 4. Setup frontend environment:
 ```bash
@@ -124,6 +130,11 @@ npm run build
 - `GET /cv/download/:id` - Download CV as PDF
 - `GET /cv/ats-score/:id` - Get ATS score and suggestions for a CV
 
+### Payment (Lenco Integration)
+- `POST /payment/initiate` - Initiate payment (mobile money or card)
+- `POST /payment/verify/:reference` - Verify payment status
+- `POST /payment/webhook` - Webhook for payment callbacks
+
 ## Tech Stack
 
 ### Backend
@@ -134,6 +145,8 @@ npm run build
 - PostgreSQL (Neon DB)
 - PDFKit (PDF generation)
 - Zod (validation)
+- Axios (API calls)
+- Lenco Payment API
 
 ### Frontend
 - React 18
@@ -155,7 +168,14 @@ npm run build
 ### Payment System
 - First CV is free for each user
 - Additional CVs cost $1 each
-- Ready for Stripe integration (demo mode included)
+- Lenco payment integration with:
+  - **Mobile Money** (primary) - Pay with mobile money account
+  - **Card Payment** (secondary) - Pay with credit/debit card
+- Secure payment verification
+- Webhook support for real-time updates
+- Payment transaction tracking
+
+See [LENCO_INTEGRATION.md](./LENCO_INTEGRATION.md) for detailed documentation.
 
 ### PDF Export
 - ATS-friendly formatting

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../db/index.js';
-import { cvs } from '../db/schema.js';
+import { cvs, payments , pricing} from '../db/schema.js';
 import { eq, and } from 'drizzle-orm';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { z } from 'zod';
@@ -43,6 +43,22 @@ const cvSchema = z.object({
   skills: z.array(z.string()),
 });
 
+// GET current pricing
+router.get('/pricing', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const currentPricing = await db.query.pricing.findFirst({
+      orderBy: (pricing, { desc }) => [desc(pricing.createdAt)],
+    });
+
+    res.json({
+      additionalCvPrice: currentPricing?.additionalCvPrice || 100, // default $1.00 in cents
+    });
+  } catch (error) {
+    console.error('Get pricing error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET all CVs for authenticated user
 router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -57,6 +73,26 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
+// GET single CV by ID
+router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const cvId = req.params.id;
+    
+    const cv = await db.query.cvs.findFirst({
+      where: and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)),
+    });
+
+    if (!cv) {
+      return res.status(404).json({ error: 'CV not found' });
+    }
+
+    res.json({ cv });
+  } catch (error) {
+    console.error('Get CV error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST create new CV
 router.post('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -67,16 +103,53 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       where: eq(cvs.userId, req.userId!),
     });
 
-    // First CV is free, subsequent ones require payment
-    const isPaid = userCvs.length === 0;
-    const requiresPayment = userCvs.length > 0;
+    // Get current pricing
+    const currentPricing = await db.query.pricing.findFirst({
+      orderBy: (pricing, { desc }) => [desc(pricing.createdAt)],
+    });
+    const priceInCents = currentPricing?.additionalCvPrice || 100;
+    const priceInDollars = (priceInCents / 100).toFixed(2);
 
+    // First CV is free, subsequent ones require payment
+    const isFreeCV = userCvs.length === 0;
+    const requiresPayment = !isFreeCV;
+
+    // PAYMENT GUARD: Enforce payment requirement for additional CVs
     if (requiresPayment && !req.body.paymentConfirmed) {
       return res.status(402).json({
         error: 'Payment required',
-        message: 'Additional CVs cost $1. Please confirm payment.',
+        message: `Additional CVs cost $${priceInDollars}. Please confirm payment.`,
         requiresPayment: true,
+        price: priceInCents,
+        cvCount: userCvs.length,
       });
+    }
+
+    // If payment is required, verify the payment
+    if (requiresPayment && req.body.paymentReference) {
+      const payment = await db.query.payments.findFirst({
+        where: (payments, { and, eq }) =>
+          and(
+            eq(payments.lencoReference, req.body.paymentReference),
+            eq(payments.userId, req.userId!),
+            eq(payments.status, 'success')
+          ),
+      });
+
+      if (!payment) {
+        return res.status(402).json({
+          error: 'Payment not verified',
+          message: 'Payment verification failed. Please complete payment first.',
+        });
+      }
+
+      // Check if payment already used
+      if (payment.cvId) {
+        return res.status(400).json({
+          error: 'Payment already used',
+          message: 'This payment has already been used to create a CV.',
+        });
+      }
     }
 
     // Create CV
@@ -89,19 +162,100 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
         education: cvData.education,
         experience: cvData.experience,
         skills: cvData.skills,
-        isPaid: !isPaid, // If not the first CV, mark as paid
+        isPaid: requiresPayment, // Track whether this CV required payment
       })
       .returning();
 
     res.status(201).json({
       cv: newCv,
-      message: isPaid ? 'Free CV created successfully' : 'CV created successfully',
+      message: isFreeCV ? 'Free CV created successfully' : 'CV created successfully (paid)',
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
     console.error('Create CV error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT update existing CV
+router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const cvId = req.params.id;
+    const cvData = cvSchema.parse(req.body);
+
+    // Get existing CV to verify ownership
+    const existingCv = await db.query.cvs.findFirst({
+      where: and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)),
+    });
+
+    if (!existingCv) {
+      return res.status(404).json({ error: 'CV not found' });
+    }
+
+    // SECURITY: Ensure only the owner can update the CV
+    // The and() clause above already enforces this, but we double-check
+    if (existingCv.userId !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized to update this CV' });
+    }
+
+    // Update CV (editing existing CVs is free - no payment required)
+    const [updatedCv] = await db
+      .update(cvs)
+      .set({
+        title: cvData.title,
+        personalInfo: cvData.personalInfo,
+        education: cvData.education,
+        experience: cvData.experience,
+        skills: cvData.skills,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)))
+      .returning();
+
+    res.json({
+      cv: updatedCv,
+      message: 'CV updated successfully',
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Update CV error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// DELETE CV
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const cvId = req.params.id;
+
+    // Get existing CV to verify ownership
+    const existingCv = await db.query.cvs.findFirst({
+      where: and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)),
+    });
+
+    if (!existingCv) {
+      return res.status(404).json({ error: 'CV not found' });
+    }
+
+    // SECURITY: Ensure only the owner can delete the CV
+    if (existingCv.userId !== req.userId) {
+      return res.status(403).json({ error: 'Unauthorized to delete this CV' });
+    }
+
+    // Delete CV
+    await db
+      .delete(cvs)
+      .where(and(eq(cvs.id, cvId), eq(cvs.userId, req.userId!)));
+
+    res.json({
+      message: 'CV deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete CV error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
