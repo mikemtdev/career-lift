@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCvs } from '@/hooks/useCvs';
 import { usePricing } from '@/hooks/usePricing';
 import { apiClient } from '@/lib/api';
-import { Download, Plus, FileText, Shield, Edit } from 'lucide-react';
+import { Download, Plus, FileText, Shield } from 'lucide-react';
 import { withAuth } from '@/hocs/withAuth';
 import { ATSScoreCard } from '@/components/ATSScoreCard';
 import { useState } from 'react';
