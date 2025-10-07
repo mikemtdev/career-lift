@@ -1,5 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { searchPhoneNumber, formatPhoneNumber, normalizePhoneNumber } from '../utils/phoneNumber';
 
 dotenv.config();
 
@@ -13,9 +14,16 @@ interface InitiatePaymentParams {
   paymentMethod: 'mobile_money' | 'card';
   customerEmail: string;
   customerName: string;
-  phoneNumber?: string;
+  phoneNumber: string; // Made required for mobile money payments
   reference: string;
   callbackUrl?: string;
+}
+
+interface MobileMoneyCollectionParams {
+  phoneNumber: string;
+  bearer: 'merchant' | 'customer';
+  amount: number;
+  reference: string;
 }
 
 interface LencoPaymentResponse {
@@ -58,26 +66,195 @@ class LencoPaymentService {
     };
   }
 
+  /**
+   * Validates if a phone number is supported for Lenco payments
+   * @param phoneNumber - The phone number to validate
+   * @returns Object with validation result and phone info
+   */
+  validatePhoneNumberForPayment(phoneNumber: string) {
+    const phoneInfo = searchPhoneNumber(phoneNumber);
+
+    if (!phoneInfo.isValid) {
+      return {
+        isValid: false,
+        error: 'Invalid phone number format',
+        phoneInfo: null
+      };
+    }
+
+    if (!phoneInfo.operator || !phoneInfo.isoCode) {
+      return {
+        isValid: false,
+        error: 'Could not determine operator or country from phone number',
+        phoneInfo
+      };
+    }
+
+    // Check if country is supported
+    const supportedCountries = ['ZM', 'KE', 'UG', 'GH'];
+    if (!supportedCountries.includes(phoneInfo.isoCode)) {
+      return {
+        isValid: false,
+        error: `Country ${phoneInfo.country} is not supported for payments`,
+        phoneInfo
+      };
+    }
+
+    // Check if operator is supported
+    const supportedOperators = ['airtel', 'mtn', 'zamtel'];
+    if (!supportedOperators.includes(phoneInfo.operator)) {
+      return {
+        isValid: false,
+        error: `Operator ${phoneInfo.operator} is not supported for payments`,
+        phoneInfo
+      };
+    }
+
+    return {
+      isValid: true,
+      error: null,
+      phoneInfo
+    };
+  }
+
+  /**
+   * Formats phone number for display in payment UI
+   * @param phoneNumber - The phone number to format
+   * @returns Formatted phone number string
+   */
+  formatPhoneNumberForDisplay(phoneNumber: string): string {
+    return formatPhoneNumber(phoneNumber, true);
+  }
+
   async initiateMobileMoneyPayment(params: InitiatePaymentParams): Promise<LencoPaymentResponse> {
+    // Use phone number utility to get operator and country info
+    const phoneInfo = searchPhoneNumber(params.phoneNumber);
+    console.log(phoneInfo);
+
+    if (!phoneInfo.isValid) {
+      throw new Error('Invalid phone number provided');
+    }
+
+    if (!phoneInfo.operator || !phoneInfo.isoCode) {
+      throw new Error('Could not determine operator or country from phone number');
+    }
+
+    // Map ISO codes to country codes expected by Lenco
+    const countryMap: { [key: string]: string } = {
+      'ZM': 'zm',
+      'KE': 'ke',
+      'UG': 'ug',
+      'GH': 'gh'
+    };
+
+    const country = countryMap[phoneInfo.isoCode];
+    if (!country) {
+      throw new Error(`Unsupported country: ${phoneInfo.country}`);
+    }
+
+    // Validate operator is supported by Lenco
+    if (!['airtel', 'mtn', 'zamtel'].includes(phoneInfo.operator)) {
+      throw new Error(`Unsupported operator: ${phoneInfo.operator}`);
+    }
+
+    const bearer = 'merchant';
+    const normalizedPhone = normalizePhoneNumber(params.phoneNumber);
+    console.log({
+      operator: phoneInfo.operator,
+      bearer: bearer,
+      amount: params.amount,
+      reference: params.reference,
+      phone: normalizedPhone,
+      country: country
+    });
+
     try {
-      const response = await axios.post(
-        `${this.baseUrl}/payments/mobile-money/initialize`,
-        {
-          amount: params.amount,
-          currency: params.currency,
-          email: params.customerEmail,
-          name: params.customerName,
-          phone_number: params.phoneNumber,
-          reference: params.reference,
-          callback_url: params.callbackUrl,
+      const options = {
+        method: 'POST',
+        url: `${this.baseUrl}/collections/mobile-money`,
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          Authorization: `Bearer ${this.secretKey}`
         },
-        { headers: this.getHeaders() }
-      );
+        data: {
+          operator: phoneInfo.operator,
+          bearer: bearer,
+          amount: params.amount,
+          reference: params.reference,
+          phone: normalizedPhone,
+          country: country
+        }
+      };
+
+      const response = await axios.request(options);
+      console.log("Lenco mobile money payment response:", response.data);
 
       return response.data;
     } catch (error: any) {
-      console.error('Lenco mobile money payment error:', error.response?.data || error.message);
+      console.error('Lenco mobile money payment error:', error);
       throw new Error(error.response?.data?.message || 'Failed to initiate mobile money payment');
+    }
+  }
+
+  async collectMobileMoney(params: MobileMoneyCollectionParams): Promise<LencoPaymentResponse> {
+    try {
+      // Use phone number utility to get operator and country info
+      const phoneInfo = searchPhoneNumber(params.phoneNumber);
+
+      if (!phoneInfo.isValid) {
+        throw new Error('Invalid phone number provided');
+      }
+
+      if (!phoneInfo.operator || !phoneInfo.isoCode) {
+        throw new Error('Could not determine operator or country from phone number');
+      }
+
+      // Map ISO codes to country codes expected by Lenco
+      const countryMap: { [key: string]: string } = {
+        'ZM': 'zm',
+        'KE': 'ke',
+        'UG': 'ug',
+        'GH': 'gh'
+      };
+
+      const country = countryMap[phoneInfo.isoCode];
+      if (!country) {
+        throw new Error(`Unsupported country: ${phoneInfo.country}`);
+      }
+
+      // Validate operator is supported by Lenco
+      if (!['airtel', 'mtn', 'zamtel'].includes(phoneInfo.operator)) {
+        throw new Error(`Unsupported operator: ${phoneInfo.operator}`);
+      }
+
+      const normalizedPhone = normalizePhoneNumber(params.phoneNumber);
+
+      const options = {
+        method: 'POST',
+        url: `${this.baseUrl}/collections/mobile-money`,
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`
+        },
+        data: {
+          operator: phoneInfo.operator,
+          bearer: params.bearer,
+          amount: params.amount,
+          reference: params.reference,
+          phone: normalizedPhone,
+          country: country
+        }
+      };
+
+      const response = await axios.request(options);
+      console.log("Lenco mobile money collection response:", response.data);
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Lenco mobile money collection error:', error);
+      throw new Error(error.response?.data?.message || 'Failed to collect mobile money payment');
     }
   }
 
@@ -105,15 +282,22 @@ class LencoPaymentService {
 
   async verifyPayment(reference: string): Promise<VerifyPaymentResponse> {
     try {
-      const response = await axios.get(
-        `${this.baseUrl}/payments/verify/${reference}`,
-        { headers: this.getHeaders() }
-      );
+      const options = {
+        method: 'GET',
+        url: `${this.baseUrl}/collections/status/${reference}`,
+        headers: {
+          accept: 'application/json',
+          Authorization: `Bearer ${this.secretKey}`
+        }
+      };
+
+      const response = await axios.request(options);
+      console.log("Collection status response:", response.data);
 
       return response.data;
     } catch (error: any) {
-      console.error('Lenco verify payment error:', error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || 'Failed to verify payment');
+      console.error('Lenco collection status error:', error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || 'Failed to check collection status');
     }
   }
 }
