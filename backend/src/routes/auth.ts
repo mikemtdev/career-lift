@@ -59,6 +59,7 @@ router.post('/signup', async (req, res) => {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
+        isAdmin: newUser.isAdmin,
       },
       token,
     });
@@ -106,6 +107,7 @@ router.post('/login', async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        isAdmin: user.isAdmin,
       },
       token,
     });

@@ -103,6 +103,25 @@ class ApiClient {
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   }
+
+  async getPricing() {
+    return this.fetch('/cv/pricing');
+  }
+
+  async getAdminStats() {
+    return this.fetch('/admin/stats');
+  }
+
+  async getAdminPricing() {
+    return this.fetch('/admin/pricing');
+  }
+
+  async updateAdminPricing(priceInCents: number) {
+    return this.fetch('/admin/pricing', {
+      method: 'PUT',
+      body: JSON.stringify({ additionalCvPrice: priceInCents }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
