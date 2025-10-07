@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  isAdmin?: boolean;
 }
 
 export interface PersonalInfo {
@@ -49,4 +50,18 @@ export interface CVFormData {
   education: Education[];
   experience: Experience[];
   skills: string[];
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalCvs: number;
+  freeCvs: number;
+  paidCvs: number;
+}
+
+export interface Pricing {
+  id?: string;
+  additionalCvPrice: number; // price in cents
+  createdAt?: string;
+  updatedAt?: string;
 }

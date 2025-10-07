@@ -6,6 +6,7 @@ export const users = pgTable('users', {
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
   name: text('name'),
+  isAdmin: boolean('is_admin').default(false).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -29,6 +30,21 @@ export const sessions = pgTable('sessions', {
   token: text('token').notNull().unique(),
   expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const pricing = pgTable('pricing', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  additionalCvPrice: integer('additional_cv_price').notNull().default(100),
+   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  cvId: uuid('cv_id').references(() => cvs.id, { onDelete: 'set null' }),
+  amount: integer('amount').notNull(), // Amount in cents
+  currency: text('currency').default('USD').notNull(),
+  paymentMethod: text('payment_method').notNull(), // 'mobile_money' or 'card'
+  lencoReference: text('lenco_reference').unique(),
+  status: text('status').notNull(), // 'pending', 'success', 'failed'
+  metadata: json('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const payments = pgTable('payments', {

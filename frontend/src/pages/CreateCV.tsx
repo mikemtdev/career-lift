@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { CVForm } from '@/components/CVForm';
 import { CVFormData } from '@/types';
 import { apiClient } from '@/lib/api';
 import { useCvs } from '@/hooks/useCvs';
+import { usePricing } from '@/hooks/usePricing';
 import { withAuth } from '@/hocs/withAuth';
 import { ArrowLeft } from 'lucide-react';
 import { PaymentDialog } from '@/components/PaymentDialog';
@@ -12,10 +13,19 @@ import { PaymentDialog } from '@/components/PaymentDialog';
 const CreateCVComponent = () => {
   const navigate = useNavigate();
   const { cvs, mutate } = useCvs();
+  const { pricing } = usePricing();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [pendingCvData, setPendingCvData] = useState<CVFormData | null>(null);
+  const [showPaymentWarning, setShowPaymentWarning] = useState(false);
+  const [currentPrice, setCurrentPrice] = useState('1.00');
+
+  useEffect(() => {
+    if (pricing) {
+      setCurrentPrice((pricing / 100).toFixed(2));
+    }
+  }, [pricing]);
 
   const handleSubmit = async (data: CVFormData) => {
     setError('');
@@ -64,6 +74,14 @@ const CreateCVComponent = () => {
       // Redirect to Lenco payment page if authorization URL is provided
       if (response.authorization_url) {
         window.location.href = response.authorization_url;
+      const payload = confirmPayment ? { ...data, paymentConfirmed: true } : data;
+      await apiClient.createCv(payload);
+      await mutate();
+      navigate('/dashboard');
+    } catch (err: any) {
+      if (err.message.includes('Payment required')) {
+        setShowPaymentWarning(true);
+        setError(`This is your additional CV. It costs $${currentPrice}. Click "Confirm & Create" to proceed.`);
       } else {
         // For demo purposes, simulate payment success
         setTimeout(async () => {
@@ -105,7 +123,7 @@ const CreateCVComponent = () => {
         {cvs.length === 0 && (
           <div className="mb-6 p-4 bg-primary/10 border border-primary/20 rounded-lg">
             <p className="text-sm">
-              🎉 This is your first CV - it's completely free! Additional CVs cost $1 each.
+              🎉 This is your first CV - it's completely free! Additional CVs cost ${currentPrice} each.
             </p>
           </div>
         )}

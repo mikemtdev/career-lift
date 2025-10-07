@@ -3,14 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { useCvs } from '@/hooks/useCvs';
+import { usePricing } from '@/hooks/usePricing';
 import { apiClient } from '@/lib/api';
-import { Download, Plus, FileText } from 'lucide-react';
+import { Download, Plus, FileText, Shield, Edit } from 'lucide-react';
 import { withAuth } from '@/hocs/withAuth';
 
 const DashboardComponent = () => {
   const { user, logout } = useAuth();
   const { cvs, isLoading } = useCvs();
+  const { pricing } = usePricing();
   const navigate = useNavigate();
+
+  const priceInDollars = pricing ? (pricing / 100).toFixed(2) : '1.00';
 
   const handleLogout = () => {
     apiClient.logout();
@@ -32,6 +36,12 @@ const DashboardComponent = () => {
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold">CareerLift</h1>
           <div className="flex items-center gap-4">
+            {user?.isAdmin && (
+              <Button variant="outline" onClick={() => navigate('/admin')}>
+                <Shield className="w-4 h-4 mr-2" />
+                Admin
+              </Button>
+            )}
             <span className="text-sm text-muted-foreground">
               {user?.email}
             </span>
@@ -50,7 +60,7 @@ const DashboardComponent = () => {
               {cvs.length === 0 ? (
                 'Create your first CV for free!'
               ) : (
-                `You have ${cvs.length} CV${cvs.length > 1 ? 's' : ''}. Additional CVs cost $1.`
+                `You have ${cvs.length} CV${cvs.length > 1 ? 's' : ''}. Additional CVs cost $${priceInDollars}.`
               )}
             </p>
           </div>
@@ -96,14 +106,24 @@ const DashboardComponent = () => {
                     <p>Experience entries: {cv.experience.length}</p>
                     <p>Skills: {cv.skills.length}</p>
                   </div>
-                  <Button
-                    className="w-full mt-4"
-                    variant="outline"
-                    onClick={() => handleDownload(cv.id)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PDF
-                  </Button>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      className="flex-1"
+                      variant="outline"
+                      onClick={() => navigate(`/edit-cv/${cv.id}`)}
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      variant="outline"
+                      onClick={() => handleDownload(cv.id)}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}

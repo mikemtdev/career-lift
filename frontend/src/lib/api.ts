@@ -57,6 +57,10 @@ class ApiClient {
     return this.fetch('/cv');
   }
 
+  async getCv(cvId: string) {
+    return this.fetch(`/cv/${cvId}`);
+  }
+
   async createCv(cvData: any) {
     return this.fetch('/cv', {
       method: 'POST',
@@ -80,6 +84,16 @@ class ApiClient {
   async verifyPayment(reference: string) {
     return this.fetch(`/payment/verify/${reference}`, {
       method: 'POST',
+  async updateCv(cvId: string, cvData: any) {
+    return this.fetch(`/cv/${cvId}`, {
+      method: 'PUT',
+      body: JSON.stringify(cvData),
+    });
+  }
+
+  async deleteCv(cvId: string) {
+    return this.fetch(`/cv/${cvId}`, {
+      method: 'DELETE',
     });
   }
 
@@ -104,6 +118,25 @@ class ApiClient {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+  }
+
+  async getPricing() {
+    return this.fetch('/cv/pricing');
+  }
+
+  async getAdminStats() {
+    return this.fetch('/admin/stats');
+  }
+
+  async getAdminPricing() {
+    return this.fetch('/admin/pricing');
+  }
+
+  async updateAdminPricing(priceInCents: number) {
+    return this.fetch('/admin/pricing', {
+      method: 'PUT',
+      body: JSON.stringify({ additionalCvPrice: priceInCents }),
+    });
   }
 }
 
